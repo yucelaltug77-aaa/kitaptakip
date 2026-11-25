@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Bugün · Kitap Takip{% endblock %}
+{% block content %}
+<section class="dashboard-hero">
+  <div class="hero-copy">
+    <p class="hero-date">{{ today_label }}</p>
+    <p class="eyebrow hero-eyebrow">KENDİ HİKÂYENİN İÇİNDE</p>
+    <h1>{{ greeting }}{% if focus_book %}, okumaya devam edelim.{% else %}, bugün yeni bir sayfa açalım.{% endif %}</h1>
+    <p class="hero-subtitle">{% if today_pages %}Bugün {{ today_pages }} sayfa okudun. Harika gidiyorsun!{% elif current_streak %}{{ current_streak }} günlük serin devam ediyor. Bugün de zincire bir halka ekle.{% else %}Kendine küçük bir okuma molası ayır. Birkaç sayfa bile yeter.{% endif %}</p>
+    <div class="hero-actions"><a class="btn hero-primary" href="{{ url_for('library', shelf='Okunuyor') }}"><i class="bi bi-book-half"></i> Okumaya dön</a><a class="btn hero-secondary" href="{{ url_for('search') }}"><i class="bi bi-plus-lg"></i> Kitap keşfet</a></div>
+  </div>
+  <div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="hero-book"><i class="bi bi-book-half"></i><span>bir sonraki<br>sayfa seni bekliyor</span></div><span class="spark spark-one">✦</span><span class="spark spark-two">✧</span><span class="spark spark-three">✦</span></div>
+</section>
+
+<section class="dashboard-stats" aria-label="Bugünkü okuma özeti">
+  <article class="dashboard-stat"><span class="dashboard-stat-icon orange-icon"><i class="bi bi-file-earmark-text"></i></span><div><span class="dashboard-stat-label">Bugün okunan</span><strong>{{ today_pages }} <small>sayfa</small></strong></div></article>
+  <article class="dashboard-stat"><span class="dashboard-stat-icon purple-icon"><i class="bi bi-stopwatch"></i></span><div><span class="dashboard-stat-label">Okuma zamanı</span><strong>{{ today_minutes }} <small>/ {{ daily_goal }} dk</small></strong></div></article>
+  <article class="dashboard-stat"><span class="dashboard-stat-icon green-icon"><i class="bi bi-fire"></i></span><div><span class="dashboard-stat-label">Mevcut seri</span><strong>{{ current_streak }} <small>gün</small></strong></div></article>
+  <article class="dashboard-stat"><span class="dashboard-stat-icon blue-icon"><i class="bi bi-trophy"></i></span><div><span class="dashboard-stat-label">Yıllık hedef</span><strong>{{ books_completed }} <small>/ {{ annual_goal }} kitap</small></strong></div></article>
+</section>
+
+<div class="dashboard-main-grid">
+  <section class="dashboard-panel focus-panel">
+    <div class="dashboard-section-heading"><div><p class="eyebrow">KALDIĞIN YERDEN</p><h2>Şu anki kitabın</h2></div><a class="quiet-link" href="{{ url_for('library', shelf='Okunuyor') }}">Tümünü gör <i class="bi bi-arrow-up-right"></i></a></div>
+    {% if focus_book %}
+    <div class="focus-book">
+      <img class="focus-cover" src="{{ url_for('static', filename=focus_book.cover_path) if focus_book.cover_path else url_for('static', filename='cover-placeholder.svg') }}" alt="{{ focus_book.title }} kitap kapağı" onerror="this.onerror=null;this.src='{{ url_for('static', filename='cover-placeholder.svg') }}'">
+      <div class="focus-book-info">
+        <span class="focus-kicker"><i class="bi bi-bookmark-heart"></i> OKUMAYA DEVAM ET</span>
+        <h3><a href="{{ url_for('book_detail', book_id=focus_book.id) }}">{{ focus_book.title }}</a></h3>
+        <p>{{ focus_book.author or 'Yazar bilgisi yok' }}</p>
+        <div class="focus-progress-label"><span>Sayfa {{ focus_book.current_page }} / {{ focus_book.total_pages }}</span><strong>{{ focus_book.current_page * 100 // focus_book.total_pages }}%</strong></div>
+        <div class="progress focus-progress"><div class="progress-bar" style="width: {{ focus_book.current_page * 100 // focus_book.total_pages }}%"></div></div>
+        <a class="btn btn-primary btn-sm mt-3" href="{{ url_for('book_detail', book_id=focus_book.id) }}"><i class="bi bi-play-fill"></i> Okuma oturumu başlat</a>
+      </div>
+    </div>
+    {% else %}
+    <div class="dashboard-empty"><span><i class="bi bi-book"></i></span><div><h3>Yeni bir hikâyeye yer aç</h3><p>Okumakta olduğun kitap yok. Kitaplığından bir kitap seç ya da yeni bir kitap keşfet.</p><a class="btn btn-primary btn-sm" href="{{ url_for('library', shelf='Okunacak') }}">Okunacak kitaplarıma bak</a> <a class="btn btn-light btn-sm" href="{{ url_for('search') }}">Kitap ara</a></div></div>
+    {% endif %}
+  </section>
+
+  <section class="dashboard-panel mission-panel">
+    <div class="dashboard-section-heading"><div><p class="eyebrow">KÜÇÜK ADIMLAR, GÜZEL RİTİM</p><h2>Bu haftanın yolculuğu</h2></div><span class="mission-week">PZT–PAZ</span></div>
+    <div class="mission-item">
+      <span class="mission-icon mission-icon-pages"><i class="bi bi-journal-bookmark"></i></span>
+      <div class="mission-content"><div class="mission-title-row"><strong>{{ weekly_goal }} sayfa oku</strong><span>{{ week_pages }} / {{ weekly_goal }}</span></div><div class="mission-track"><span style="width: {{ weekly_progress }}%"></span></div><small>{% if weekly_progress >= 100 %}Görev tamamlandı! Kendine aferin. ✨{% else %}Haftalık hedefine {{ [weekly_goal - week_pages, 0]|max }} sayfa kaldı{% endif %}</small></div>
+    </div>
+    <div class="mission-item">
+      <span class="mission-icon mission-icon-time"><i class="bi bi-cup-hot"></i></span>
+      <div class="mission-content"><div class="mission-title-row"><strong>Bugün {{ daily_goal }} dakika ayır</strong><span>{{ today_minutes }} / {{ daily_goal }} dk</span></div><div class="mission-track time-track"><span style="width: {{ daily_progress }}%"></span></div><small>{% if daily_progress >= 100 %}Bugünün okuma molası tamam! 🌟{% else %}{{ [daily_goal - today_minutes, 0]|max }} dakika ayırman yeterli{% endif %}</small></div>
+    </div>
+    <div class="weekly-footnote"><i class="bi bi-lightbulb"></i> {{ week_sessions }} oturumla bu hafta okumaya zaman ayırdın.</div>
+  </section>
+</div>
+
+<section class="dashboard-panel achievement-panel">
+  <div class="dashboard-section-heading"><div><p class="eyebrow">HER SAYFA BİR İZ BIRAKIR</p><h2>Başarı koleksiyonun</h2><p class="section-caption">{{ unlocked_count }} / {{ achievements|length }} rozet açıldı. Sıradaki sana göz kırpıyor.</p></div><a class="quiet-link" href="{{ url_for('stats') }}">İstatistikler <i class="bi bi-arrow-up-right"></i></a></div>
+  <div class="achievement-grid">
+  {% for badge in achievements %}
+    <article class="achievement-badge {% if not badge.unlocked %}badge-locked{% endif %}">
+      <span class="achievement-icon"><i class="bi {{ badge.icon }}"></i>{% if badge.unlocked %}<span class="badge-check"><i class="bi bi-check"></i></span>{% endif %}</span>
+      <strong>{{ badge.title }}</strong><p>{{ badge.description }}</p>
+      {% if not badge.unlocked %}<span class="badge-hint"><i class="bi bi-lock"></i> Yakında açılacak</span>{% else %}<span class="badge-hint badge-earned"><i class="bi bi-stars"></i> Kazanıldı</span>{% endif %}
+    </article>
+  {% endfor %}
+  </div>
+</section>
+
+<div class="dashboard-bottom-grid">
+  <section class="dashboard-panel recent-panel">
+    <div class="dashboard-section-heading"><div><p class="eyebrow">KÜÇÜK BİR GERİ BAKIŞ</p><h2>Son okuma notların</h2></div><a class="quiet-link" href="{{ url_for('stats') }}">Tüm istatistikler <i class="bi bi-arrow-up-right"></i></a></div>
+    {% if recent_sessions %}
+    <div class="recent-session-list">
+      {% for entry in recent_sessions %}
+      <a class="recent-session" href="{{ url_for('book_detail', book_id=entry.book_id) }}">
+        <span class="recent-session-icon"><i class="bi bi-book"></i></span>
+        <span class="recent-session-info"><strong>{{ entry.book_title }}</strong><small>{{ entry.read_date }}{% if entry.note %} · {{ entry.note }}{% endif %}</small></span>
+        <span class="recent-session-pages">+{{ entry.pages_read }} <small>sayfa</small></span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="recent-empty"><i class="bi bi-journal-plus"></i><p>İlk okuma oturumun burada görünecek.</p></div>
+    {% endif %}
+  </section>
+  <aside class="reading-note-card">
+    <span class="reading-note-mark"><i class="bi bi-quote"></i></span>
+    <p class="eyebrow">BUGÜNÜN OKUMA NOTU</p>
+    <blockquote>“{{ quote }}”</blockquote>
+    <span class="reading-note-author">— {{ quote_author }}</span>
+    <span class="note-decoration note-decoration-one">✦</span><span class="note-decoration note-decoration-two">✧</span>
+  </aside>
+</div>
+
+<section class="dashboard-footer-cta">
+  <div><span class="footer-cta-icon"><i class="bi bi-compass"></i></span><span><strong>Yeni bir dünyaya göz at</strong><small>Kitapyurdu'nda ara veya kendi kitabını ekle.</small></span></div>
+  <a class="btn btn-dark" href="{{ url_for('search') }}">Kitap keşfet <i class="bi bi-arrow-right"></i></a>
+</section>
+{% endblock %}

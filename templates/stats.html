@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}İstatistikler · Kitap Takip{% endblock %}
+{% block head %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">OKUMA RİTMİN</p><h1>İstatistikler</h1></div></div>
+<div class="stats-grid stats-grid-wide">
+  <section class="card stat-card"><div class="stat-icon"><i class="bi bi-book-half"></i></div><p>Bu yıl tamamlanan</p><strong>{{ completed }} <small>kitap</small></strong><span>{{ goal_status }}</span><div class="stat-track"><span style="width: {{ [100, completed * 100 // goal]|min }}%"></span></div></section>
+  <section class="card stat-card"><div class="stat-icon"><i class="bi bi-file-earmark-text"></i></div><p>Bu yıl okunan</p><strong>{{ year_pages }} <small>sayfa</small></strong><span>{{ year_sessions }} okuma oturumu</span></section>
+  <section class="card stat-card"><div class="stat-icon"><i class="bi bi-stopwatch"></i></div><p>Bu yıl okuma süren</p><strong>{{ year_minutes // 60 }} <small>saat</small> {{ year_minutes % 60 }} <small>dk</small></strong><span>Kaydedilen toplam süre</span></section>
+  <section class="card stat-card"><div class="stat-icon"><i class="bi bi-fire"></i></div><p>Okuma serisi</p><strong>{{ streak }} <small>gün</small></strong><span>En uzun serin: {{ max_streak }} gün</span></section>
+</div>
+<section class="card monthly-progress-card mt-4">
+  <div class="card-body"><div class="monthly-heading"><div><p class="eyebrow">AYLIK HEDEF</p><h2>{{ month_pages }} <span>/ {{ monthly_goal }} sayfa</span></h2></div><strong>{{ month_goal_percent }}%</strong></div>
+    <div class="progress goal-progress" role="progressbar" aria-label="Aylık sayfa hedefi" aria-valuenow="{{ month_goal_percent }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width: {{ month_goal_percent }}%"></div></div>
+    <p class="text-secondary mb-0 mt-2">Bu ayki sayfa hedefinin {{ month_goal_percent }}%'ini tamamladın.</p>
+  </div>
+</section>
+<section class="card chart-card mt-4"><div class="card-body"><h2 class="h5">Aylık okunan sayfa</h2><p class="text-secondary small">Seçili yıldaki günlük okuma kayıtlarından hesaplanır.</p><div class="chart-wrap"><canvas id="pagesChart" aria-label="Aylık okunan sayfa grafiği"></canvas></div></div></section>
+<section class="card activity-card mt-4">
+  <div class="card-body"><div class="panel-heading"><div><p class="eyebrow">SON 90 GÜN</p><h2>Okuma takvimi</h2></div><span class="activity-legend">Az <i class="activity-level-0"></i><i class="activity-level-1"></i><i class="activity-level-2"></i><i class="activity-level-3"></i> Çok</span></div>
+    <div class="activity-calendar">
+    {% for day in calendar %}
+      {% set level = 0 if day.pages == 0 else 1 if day.pages < 15 else 2 if day.pages < 40 else 3 %}
+      <span class="activity-day activity-level-{{ level }}" title="{{ day.date }} · {{ day.pages }} sayfa" aria-label="{{ day.date }}: {{ day.pages }} sayfa"></span>
+    {% endfor %}
+    </div>
+    <p class="text-secondary small mt-3 mb-0">Hücre üzerine gelerek o gün kaydedilen sayfa sayısını görebilirsin.</p>
+  </div>
+</section>
+<section class="card goal-card mt-4" id="hedef">
+  <div class="card-body"><p class="eyebrow">KİŞİSEL HEDEFLER</p><h2 class="h5">Hedeflerini düzenle</h2><p class="text-secondary">Kitap ve sayfa hedeflerini kendi okuma tempona göre belirle.</p>
+    <div class="goal-settings-grid">
+      <form method="post" class="goal-setting-form"><input type="hidden" name="goal_type" value="annual_books"><label class="form-label" for="annual_goal">Yıllık kitap hedefi</label><div class="goal-form"><input class="form-control" id="annual_goal" name="annual_goal" type="number" min="1" max="1000" value="{{ goal }}" required><button class="btn btn-primary" type="submit">Kaydet</button></div><div class="form-text">Yılda tamamlamak istediğin kitap sayısı.</div></form>
+      <form method="post" class="goal-setting-form"><input type="hidden" name="goal_type" value="monthly_pages"><label class="form-label" for="monthly_page_goal">Aylık sayfa hedefi</label><div class="goal-form"><input class="form-control" id="monthly_page_goal" name="monthly_page_goal" type="number" min="1" max="100000" value="{{ monthly_goal }}" required><button class="btn btn-primary" type="submit">Kaydet</button></div><div class="form-text">Ay boyunca okumak istediğin sayfa sayısı.</div></form>
+      <form method="post" class="goal-setting-form"><input type="hidden" name="goal_type" value="weekly_pages"><label class="form-label" for="weekly_page_goal">Haftalık sayfa görevi</label><div class="goal-form"><input class="form-control" id="weekly_page_goal" name="weekly_page_goal" type="number" min="1" max="100000" value="{{ weekly_goal }}" required><button class="btn btn-primary" type="submit">Kaydet</button></div><div class="form-text">Pazartesi ile pazar arasında ulaşmak istediğin sayfa sayısı.</div></form>
+      <form method="post" class="goal-setting-form"><input type="hidden" name="goal_type" value="daily_minutes"><label class="form-label" for="daily_minute_goal">Günlük okuma molası</label><div class="goal-form"><input class="form-control" id="daily_minute_goal" name="daily_minute_goal" type="number" min="1" max="1440" value="{{ daily_goal }}" required><button class="btn btn-primary" type="submit">Kaydet</button></div><div class="form-text">Her gün okumaya ayırmak istediğin dakika.</div></form>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+new Chart(document.getElementById('pagesChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
+    datasets: [
+      { label: 'Okunan sayfa', data: {{ monthly_pages|tojson }}, backgroundColor: '#EC691F', borderRadius: 6, maxBarThickness: 36 },
+      { label: 'Aylık hedef', data: Array(12).fill({{ monthly_goal }}), type: 'line', borderColor: '#94a3b8', borderDash: [5, 5], pointRadius: 0, borderWidth: 2 }
+    ]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+});
+</script>
+{% endblock %}

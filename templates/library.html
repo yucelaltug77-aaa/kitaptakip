@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Kitaplığım · Kitap Takip{% endblock %}
+{% block content %}
+<div class="page-heading">
+  <div><p class="eyebrow">KİŞİSEL KİTAPLIĞIN</p><h1>Kitaplığım</h1><p class="text-secondary mb-0">{{ shelf_counts['Okunacak'] + shelf_counts['Okunuyor'] + shelf_counts['Okundu'] }} kitap · {{ shelf_counts['Okunuyor'] }} aktif okuma</p></div>
+  <a class="btn btn-primary" href="{{ url_for('search') }}"><i class="bi bi-plus-lg"></i> Kitap ekle</a>
+</div>
+<ul class="nav shelf-tabs mb-4">
+  {% for shelf in ['Okunacak', 'Okunuyor', 'Okundu'] %}
+  <li class="nav-item"><a class="nav-link {% if shelf == active_shelf %}active{% endif %}" href="{{ url_for('library', shelf=shelf, q=query, sort=sort) }}">{{ shelf }} <span class="tab-count">{{ shelf_counts[shelf] }}</span></a></li>
+  {% endfor %}
+</ul>
+<form class="library-filters card card-body mb-4" method="get" action="{{ url_for('library') }}">
+  <input type="hidden" name="shelf" value="{{ active_shelf }}">
+  <label class="visually-hidden" for="library-query">Kitaplığında ara</label>
+  <div class="library-filter-search"><i class="bi bi-search"></i><input id="library-query" class="form-control" type="search" name="q" value="{{ query }}" placeholder="Kitap adı, yazar veya ISBN"></div>
+  <label class="visually-hidden" for="library-sort">Kitapları sırala</label>
+  <select id="library-sort" class="form-select" name="sort">
+    <option value="recent" {% if sort == 'recent' %}selected{% endif %}>Son eklenen</option>
+    <option value="title" {% if sort == 'title' %}selected{% endif %}>Kitap adına göre</option>
+    <option value="author" {% if sort == 'author' %}selected{% endif %}>Yazara göre</option>
+    <option value="progress" {% if sort == 'progress' %}selected{% endif %}>İlerlemeye göre</option>
+    <option value="rating" {% if sort == 'rating' %}selected{% endif %}>Puana göre</option>
+  </select>
+  <button class="btn btn-outline-primary" type="submit">Uygula</button>
+  {% if query %}<a class="btn btn-light" href="{{ url_for('library', shelf=active_shelf, sort=sort) }}">Temizle</a>{% endif %}
+</form>
+{% if books %}
+<div class="book-grid">
+{% for book in books %}
+  <article class="card book-card">
+    <div class="book-top">
+      <img class="book-cover" src="{{ url_for('static', filename=book.cover_path) if book.cover_path else url_for('static', filename='cover-placeholder.svg') }}" alt="{{ book.title }} kitap kapağı" onerror="this.onerror=null;this.src='{{ url_for('static', filename='cover-placeholder.svg') }}'">
+      <div class="book-main">
+        <span class="shelf-badge shelf-{{ 'reading' if book.shelf == 'Okunuyor' else 'read' if book.shelf == 'Okundu' else 'want' }}">{{ book.shelf }}</span>
+        <h2 class="book-title"><a class="book-title-link" href="{{ url_for('book_detail', book_id=book.id) }}">{{ book.title }}</a></h2>
+        <p class="book-author">{{ book.author or 'Yazar bilgisi yok' }}</p>
+        {% if book.publisher %}<p class="book-publisher">{{ book.publisher }}</p>{% endif %}
+        {% if book.source_url %}<a class="source-link" href="{{ book.source_url }}" target="_blank" rel="noopener noreferrer">Kitapyurdu'nda gör <i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+      </div>
+    </div>
+    <div class="progress-label"><span>{{ book.current_page }} / {{ book.total_pages }} sayfa</span><span>{{ (book.current_page * 100 // book.total_pages) }}%</span></div>
+    <div class="progress mb-3" role="progressbar" aria-label="Okuma ilerlemesi" aria-valuenow="{{ book.current_page * 100 // book.total_pages }}" aria-valuemin="0" aria-valuemax="100">
+      <div class="progress-bar" style="width: {{ book.current_page * 100 // book.total_pages }}%"></div>
+    </div>
+    {% if book.estimate_days is not none and book.estimate_days > 0 %}<p class="estimate"><i class="bi bi-hourglass-split"></i> Bu hızla {{ book.estimate_days }} günde bitirirsin</p>{% endif %}
+    <form class="reading-form" method="post" action="{{ url_for('add_reading', book_id=book.id) }}">
+      <label class="visually-hidden" for="page-{{ book.id }}">Bugün okuduğun son sayfa</label>
+      <input class="form-control form-control-sm" id="page-{{ book.id }}" name="page" type="number" min="1" max="{{ book.total_pages }}" placeholder="Son sayfa" required>
+      <button class="btn btn-primary btn-sm" type="submit">Bugün okudum</button>
+    </form>
+    <a class="detail-link" href="{{ url_for('book_detail', book_id=book.id) }}"><i class="bi bi-journal-text"></i> Detaylar ve okuma geçmişi</a>
+    {% if book.last_reading_id %}
+    <form class="mt-2" method="post" action="{{ url_for('remove_last_reading', book_id=book.id) }}">
+      <button class="btn btn-link btn-sm p-0 text-secondary" type="submit">Son sayfa kaydını sil</button>
+    </form>
+    {% endif %}
+    <div class="book-footer">
+      <form method="post" action="{{ url_for('change_shelf', book_id=book.id) }}" class="shelf-select">
+        <label class="visually-hidden" for="shelf-{{ book.id }}">Rafı değiştir</label>
+        <select class="form-select form-select-sm" id="shelf-{{ book.id }}" name="shelf" onchange="this.form.submit()">
+          {% for shelf in ['Okunacak', 'Okunuyor', 'Okundu'] %}<option {% if shelf == book.shelf %}selected{% endif %}>{{ shelf }}</option>{% endfor %}
+        </select>
+      </form>
+    </div>
+    <details class="rating-details">
+      <summary>{% if book.rating %}<span class="stars">{% for _ in range(book.rating) %}★{% endfor %}</span> Puanı düzenle{% else %}Puan ve not ekle{% endif %}</summary>
+      <form method="post" action="{{ url_for('rate_book', book_id=book.id) }}" class="mt-2">
+        <label class="form-label small" for="rating-{{ book.id }}">Puan</label>
+        <select class="form-select form-select-sm mb-2" id="rating-{{ book.id }}" name="rating">
+          <option value="0">Puanlama</option>
+          {% for score in range(1, 6) %}<option value="{{ score }}" {% if book.rating == score %}selected{% endif %}>{{ score }} yıldız</option>{% endfor %}
+        </select>
+        <label class="form-label small" for="note-{{ book.id }}">Kısa not</label>
+        <textarea class="form-control form-control-sm mb-2" id="note-{{ book.id }}" name="note" rows="2" maxlength="1000">{{ book.note }}</textarea>
+        <button class="btn btn-outline-primary btn-sm" type="submit">Kaydet</button>
+      </form>
+    </details>
+  </article>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state card"><div class="empty-icon"><i class="bi bi-book"></i></div><h2 class="h5">{% if query %}Aramana uygun kitap bulunamadı{% else %}Bu rafta henüz kitap yok{% endif %}</h2><p>{% if query %}Başka bir ad veya yazarla tekrar ara.{% else %}Kitaplığını doldurmak için bir kitap ekle.{% endif %}</p>{% if query %}<a class="btn btn-outline-primary" href="{{ url_for('library', shelf=active_shelf) }}">Aramayı temizle</a>{% else %}<a class="btn btn-primary" href="{{ url_for('search') }}">Kitap ara</a>{% endif %}</div>
+{% endif %}
+{% endblock %}

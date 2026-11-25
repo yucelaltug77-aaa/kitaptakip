@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Giriş · Kitap Takip{% endblock %}
+{% block content %}
+<section class="login-wrap">
+  <div class="card login-card">
+    <div class="card-body p-4 p-md-5">
+      <div class="login-mark">📚</div>
+      <h1 class="h3 text-center mb-2">Kitap Takip</h1>
+      <p class="text-secondary text-center mb-4">Kitaplığını takip etmeye başla.</p>
+      <form method="post">
+        <label class="form-label" for="username">Kullanıcı adı</label>
+        <input class="form-control mb-3" id="username" name="username" autocomplete="username" required autofocus>
+        <label class="form-label" for="password">Parola</label>
+        <input class="form-control mb-4" id="password" name="password" type="password" autocomplete="current-password" required>
+        <button class="btn btn-primary w-100" type="submit">Giriş</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

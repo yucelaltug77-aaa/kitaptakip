@@ -1,0 +1,15 @@
+services:
+  kitaptakip:
+    build: .
+    container_name: kitaptakip
+    restart: unless-stopped
+    ports: ["5010:5010"]
+    environment:
+      - TZ=Europe/Istanbul
+      - SECRET_KEY=degistir-beni
+    volumes:
+      - kitaptakip_data:/app/data
+      - kitaptakip_kapaklar:/app/static/kapaklar
+volumes:
+  kitaptakip_data:
+  kitaptakip_kapaklar:

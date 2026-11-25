@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}{{ book.title }} · Kitap Takip{% endblock %}
+{% block content %}
+<div class="detail-back"><a href="{{ url_for('library', shelf=book.shelf) }}"><i class="bi bi-arrow-left"></i> Kitaplığa dön</a></div>
+<section class="card detail-hero">
+  <img class="detail-cover" src="{{ url_for('static', filename=book.cover_path) if book.cover_path else url_for('static', filename='cover-placeholder.svg') }}" alt="{{ book.title }} kitap kapağı" onerror="this.onerror=null;this.src='{{ url_for('static', filename='cover-placeholder.svg') }}'">
+  <div class="detail-info">
+    <span class="shelf-badge shelf-{{ 'reading' if book.shelf == 'Okunuyor' else 'read' if book.shelf == 'Okundu' else 'want' }}">{{ book.shelf }}</span>
+    <h1>{{ book.title }}</h1>
+    <p class="detail-author">{{ book.author or 'Yazar bilgisi yok' }}</p>
+    <div class="book-metadata">
+      {% if book.publisher %}<span><i class="bi bi-building"></i> {{ book.publisher }}</span>{% endif %}
+      {% if book.publication_year %}<span><i class="bi bi-calendar3"></i> {{ book.publication_year }}</span>{% endif %}
+      {% if book.isbn %}<span><i class="bi bi-upc"></i> {{ book.isbn }}</span>{% endif %}
+      <span><i class="bi bi-book"></i> {{ book.total_pages }} sayfa</span>
+      {% if book.started_at %}<span><i class="bi bi-play-circle"></i> Başlangıç: {{ book.started_at[:10] }}</span>{% endif %}
+      {% if book.finished_at %}<span><i class="bi bi-check-circle"></i> Bitiş: {{ book.finished_at[:10] }}</span>{% endif %}
+    </div>
+    <div class="book-resource-links">
+      {% if book.source_url %}<a class="resource-link" href="{{ book.source_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-bag"></i> Kitapyurdu'nda görüntüle</a>{% endif %}
+      <a class="resource-link" href="{{ shop_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-search"></i> Kitapyurdu'nda ara</a>
+      <a class="resource-link" href="{{ catalog_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-journal-bookmark"></i> Open Library kataloğu</a>
+      {% if free_reading %}
+      <a class="resource-link resource-free-link" href="{{ free_reading.free_read_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-book-half"></i> Türkçe ücretsiz ve yasal tam metni oku</a>
+      {% else %}
+      <span class="resource-no-free"><i class="bi bi-shield-check"></i> Bu kitap için doğrulanmış ücretsiz tam metin bulunamadı.</span>
+      {% endif %}
+    </div>
+    <div class="detail-progress">
+      <div class="progress-label"><span>Okuma ilerlemesi</span><strong>{{ book.current_page }} / {{ book.total_pages }} sayfa · {{ book.current_page * 100 // book.total_pages }}%</strong></div>
+      <div class="progress" role="progressbar" aria-valuenow="{{ book.current_page * 100 // book.total_pages }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width: {{ book.current_page * 100 // book.total_pages }}%"></div></div>
+    </div>
+    {% if estimate is not none and estimate > 0 %}<p class="estimate mt-3 mb-0"><i class="bi bi-hourglass-split"></i> Son 7 günlük hızınla yaklaşık {{ estimate }} günde bitirebilirsin.</p>{% endif %}
+    <div class="detail-actions">
+      <a class="btn btn-outline-primary" href="{{ url_for('edit_book', book_id=book.id) }}"><i class="bi bi-pencil"></i> Kitap bilgilerini düzenle</a>
+      <form method="post" action="{{ url_for('remove_book', book_id=book.id) }}" onsubmit="return confirm('Bu kitabı ve tüm okuma geçmişini silmek istediğine emin misin?');">
+        <button class="btn btn-outline-danger" type="submit"><i class="bi bi-trash3"></i> Kitabı sil</button>
+      </form>
+    </div>
+  </div>
+</section>
+<div class="detail-columns">
+  <section class="card detail-panel">
+    <div class="panel-heading"><div><p class="eyebrow">OKUMA GÜNLÜĞÜ</p><h2>Oturum ekle</h2></div><i class="bi bi-journal-plus"></i></div>
+    {% if book.current_page >= book.total_pages %}
+    <div class="alert alert-success mb-0">Bu kitabı tamamladın. Okuma geçmişine ekleme yapmaya devam edebilirsin.</div>
+    {% endif %}
+    <form method="post" action="{{ url_for('add_reading', book_id=book.id) }}" class="session-form">
+      <div class="mb-3"><label class="form-label" for="page">Okuduğun son sayfa</label><input class="form-control" id="page" name="page" type="number" min="1" max="{{ book.total_pages }}" value="{{ book.current_page or '' }}" required><div class="form-text">Önceki kayıttan düşük olamaz; sayfa toplamı {{ book.total_pages }}.</div></div>
+      <div class="row g-3">
+        <div class="col-sm-6"><label class="form-label" for="read_date">Okuma tarihi</label><input class="form-control" id="read_date" name="read_date" type="date" value="{{ today }}" max="{{ today }}" required></div>
+        <div class="col-sm-6"><label class="form-label" for="minutes">Okuma süresi (dakika)</label><input class="form-control" id="minutes" name="minutes" type="number" min="0" max="1440" placeholder="Örn. 30"></div>
+        <div class="col-12"><label class="form-label" for="session-note">Oturum notu <span class="text-secondary">(isteğe bağlı)</span></label><textarea class="form-control" id="session-note" name="note" rows="3" maxlength="500" placeholder="Aklında kalanlar, alıntılar veya düşüncelerin..."></textarea></div>
+      </div>
+      <button class="btn btn-primary mt-3" type="submit"><i class="bi bi-check2"></i> Okuma oturumunu kaydet</button>
+    </form>
+  </section>
+  <section class="card detail-panel rating-panel">
+    <div class="panel-heading"><div><p class="eyebrow">KİŞİSEL DEĞERLENDİRME</p><h2>Puanın ve notun</h2></div><i class="bi bi-star"></i></div>
+    <form method="post" action="{{ url_for('rate_book', book_id=book.id) }}">
+      <label class="form-label" for="rating">Puan</label>
+      <select class="form-select mb-3" id="rating" name="rating"><option value="0">Henüz puanlama</option>{% for score in range(1, 6) %}<option value="{{ score }}" {% if book.rating == score %}selected{% endif %}>{{ '★' * score }} · {{ score }}/5</option>{% endfor %}</select>
+      <label class="form-label" for="note">Kitap hakkındaki notun</label>
+      <textarea class="form-control" id="note" name="note" rows="5" maxlength="1000" placeholder="Kitap hakkındaki düşüncelerini yaz...">{{ book.note }}</textarea>
+      <button class="btn btn-outline-primary mt-3" type="submit">Değerlendirmeyi kaydet</button>
+    </form>
+  </section>
+</div>
+<section class="card detail-panel history-panel">
+  <div class="panel-heading"><div><p class="eyebrow">TÜM KAYITLAR</p><h2>Okuma geçmişi <span class="history-count">{{ sessions|length }}</span></h2></div><i class="bi bi-clock-history"></i></div>
+  {% if sessions %}
+  <div class="table-responsive">
+    <table class="table history-table align-middle mb-0">
+      <thead><tr><th>Tarih</th><th>Sayfa</th><th>İlerleme</th><th>Süre</th><th>Not</th><th><span class="visually-hidden">İşlem</span></th></tr></thead>
+      <tbody>
+      {% for entry in sessions %}
+        <tr>
+          <td class="text-nowrap">{{ entry.read_date }}</td>
+          <td>{{ entry.pages_read }} sayfa <span class="text-secondary">· son sayfa {{ entry.page }}</span></td>
+          <td><div class="mini-progress"><span style="width: {{ entry.page * 100 // book.total_pages }}%"></span></div></td>
+          <td>{% if entry.minutes %}{{ entry.minutes }} dk{% else %}—{% endif %}</td>
+          <td class="session-note-cell">{{ entry.note or '—' }}</td>
+          <td><form method="post" action="{{ url_for('remove_reading', book_id=book.id, reading_id=entry.id) }}" onsubmit="return confirm('Bu okuma oturumunu silmek istediğine emin misin?');"><button class="btn btn-sm btn-light text-danger" aria-label="Bu oturumu sil" title="Oturumu sil"><i class="bi bi-trash3"></i></button></form></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="history-empty"><i class="bi bi-journal"></i><p>Henüz okuma oturumu yok. İlk oturumunu yukarıdan ekleyebilirsin.</p></div>
+  {% endif %}
+</section>
+{% endblock %}

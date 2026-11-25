@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Kitap ara · Kitap Takip{% endblock %}
+{% block content %}
+<div class="page-heading"><div><p class="eyebrow">KİTAPLIĞINI GENİŞLET</p><h1>Kitap ara</h1></div></div>
+<form class="search-page-form card card-body mb-4" action="{{ url_for('search') }}" method="get">
+  <input class="form-control" name="q" value="{{ query }}" placeholder="Kitap adı, yazar veya ISBN" aria-label="Kitap adı, yazar veya ISBN ara">
+  <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Ara</button>
+</form>
+{% if query and results %}
+<h2 class="h5 mb-3">Arama sonuçları</h2>
+<div class="book-grid search-grid">
+{% for book in results %}
+  <article class="card book-card search-card">
+    <div class="book-top">
+      <img class="book-cover" src="{{ book.cover_url or url_for('static', filename='cover-placeholder.svg') }}" alt="{{ book.title }} kitap kapağı" onerror="this.onerror=null;this.src='{{ url_for('static', filename='cover-placeholder.svg') }}'">
+      <div class="book-main"><h2 class="book-title">{{ book.title }}</h2><p class="book-author">{{ book.author or 'Yazar bilgisi yok' }}</p>
+        {% if book.publisher %}<p class="book-publisher">{{ book.publisher }}</p>{% endif %}
+        {% if book.publication_year %}<span class="small text-secondary">{{ book.publication_year }}</span>{% endif %}
+        <div class="search-book-links mt-2">
+          {% if book.source_url %}<a href="{{ book.source_url }}" target="_blank" rel="noopener noreferrer">Kitapyurdu <i class="bi bi-box-arrow-up-right"></i></a>{% endif %}
+          <a href="{{ book.catalog_url }}" target="_blank" rel="noopener noreferrer">Open Library <i class="bi bi-box-arrow-up-right"></i></a>
+        </div>
+      </div>
+    </div>
+    <form method="post" action="{{ url_for('create_book') }}" class="mt-3">
+      {% for field in ['title', 'author', 'publisher', 'cover_url', 'source_url', 'isbn', 'publication_year', 'total_pages'] %}
+      <input type="hidden" name="{{ field }}" value="{{ book.get(field, '') }}">
+      {% endfor %}
+      <div class="input-group">
+        <select class="form-select" name="shelf" aria-label="Eklenecek raf">
+          <option>Okunacak</option><option>Okunuyor</option><option>Okundu</option>
+        </select>
+        <button class="btn btn-primary" type="submit" {% if not book.total_pages %}disabled title="Sayfa sayısını elle girmen gerekiyor"{% endif %}>Rafa ekle</button>
+      </div>
+      {% if not book.total_pages %}
+      <p class="small text-secondary mt-2 mb-0">Sayfa sayısı bulunamadı; eklemek için <a href="#manual-add">elle ekleme formunu</a> kullan.</p>
+      {% endif %}
+    </form>
+  </article>
+{% endfor %}
+</div>
+{% elif query and not unavailable %}
+<div class="alert alert-info">Kitap bulunamadı, elle ekleyebilirsin.</div>
+{% endif %}
+{% if query %}
+<section class="card manual-form-card mt-4" id="manual-add">
+  <div class="card-body p-4">
+    <h2 class="h5 mb-3">Kitabı elle ekle</h2>
+    <form method="post" action="{{ url_for('create_book') }}">
+      <div class="row g-3">
+        <div class="col-md-8"><label class="form-label" for="title">Kitap adı *</label><input class="form-control" id="title" name="title" value="{{ query }}" required></div>
+        <div class="col-md-4"><label class="form-label" for="author">Yazar</label><input class="form-control" id="author" name="author"></div>
+        <div class="col-md-6"><label class="form-label" for="publisher">Yayınevi</label><input class="form-control" id="publisher" name="publisher"></div>
+        <div class="col-md-3"><label class="form-label" for="total_pages">Sayfa sayısı *</label><input class="form-control" id="total_pages" name="total_pages" type="number" min="1" required></div>
+        <div class="col-md-3"><label class="form-label" for="shelf">Raf</label><select class="form-select" id="shelf" name="shelf"><option>Okunacak</option><option>Okunuyor</option><option>Okundu</option></select></div>
+        <div class="col-12"><button class="btn btn-primary" type="submit">Kitabı ekle</button></div>
+      </div>
+    </form>
+  </div>
+</section>
+{% endif %}
+{% if query %}
+<p class="catalog-source-note">Türkçe kitap önerileri ve yasal ücretsiz tam metinler için <a href="{{ url_for('discover', q=query) }}">Keşfet sayfasına git</a>.</p>
+{% endif %}
+{% endblock %}

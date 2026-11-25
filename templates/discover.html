@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Keşfet · Kitap Takip{% endblock %}
+{% block content %}
+<section class="discover-hero">
+  <div class="discover-hero-copy">
+    <span class="discover-kicker"><i class="bi bi-stars"></i> OKUMA ZEVKİNE GÖRE SEÇİLDİ</span>
+    <h1>{% if query %}Yeni bir kitap mı arıyorsun?{% else %}Sıradaki hikâyeni keşfet.{% endif %}</h1>
+    <p>{% if query %}Türkçe kitap kataloğunda ara, baskı ve yayın yılına göre sırala.{% else %}Okuduğun kitaplardan ve yazarlarından yola çıkarak Türkçe öneriler hazırladık.{% endif %}</p>
+  </div>
+  <div class="discover-hero-art" aria-hidden="true"><i class="bi bi-compass"></i><span>✦</span><span>✧</span></div>
+</section>
+
+<form class="discover-toolbar card" action="{{ url_for('discover') }}" method="get">
+  <div class="discover-search">
+    <i class="bi bi-search"></i>
+    <input class="form-control" type="search" name="q" value="{{ query }}" placeholder="Türkçe kitap, yazar veya konu ara" aria-label="Türkçe kitap, yazar veya konu ara">
+  </div>
+  <label class="visually-hidden" for="discover-sort">Önerileri sırala</label>
+  <select id="discover-sort" class="form-select" name="sort">
+    <option value="editions" {% if sort_by == 'editions' %}selected{% endif %}>Katalogdaki baskı kayıtları</option>
+    <option value="year" {% if sort_by == 'year' %}selected{% endif %}>En yeni yayın yılı</option>
+    <option value="popularity" {% if sort_by == 'popularity' %}selected{% endif %}>En çok okur puanı</option>
+  </select>
+  <button class="btn btn-primary" type="submit">Keşfet</button>
+  {% if query %}<a class="btn btn-light" href="{{ url_for('discover', sort=sort_by) }}">Önerilere dön</a>{% endif %}
+</form>
+
+<div class="catalog-notice">
+  <i class="bi bi-info-circle"></i>
+  <span><strong>Veri şeffaflığı:</strong> Türkçe baskısı bulunan eserler listelenir; bazı başlıklar katalogda özgün dilde görünebilir. “Baskı kayıtları” Open Library kataloğundaki eser baskı sayısıdır, gerçek tiraj değildir. Satış adetleri açık veride bulunmadığından “okur puanı” popülerlik göstergesi olarak kullanılır; satış rakamı değildir.</span>
+</div>
+
+{% if query %}
+  <div class="discover-results-heading"><div><p class="eyebrow">TÜRKÇE KATALOG</p><h2>“{{ query }}” için sonuçlar</h2></div><span>{{ recommendations|length }} kitap</span></div>
+{% elif recommendations %}
+  <div class="discover-results-heading"><div><p class="eyebrow">OKUMA GEÇMİŞİNDEN İLHAMLA</p><h2>Sana göre kitaplar</h2></div><span>{{ recommendations|length }} öneri</span></div>
+{% endif %}
+
+{% if recommendations %}
+<div class="discover-grid">
+{% for book in recommendations %}
+  <article class="discover-card">
+    <div class="discover-cover-wrap">
+      {% if book.cover_url %}<img class="discover-cover" src="{{ book.cover_url }}" alt="{{ book.title }} kitap kapağı" loading="lazy" onerror="this.onerror=null;this.src='{{ url_for('static', filename='cover-placeholder.svg') }}'">
+      {% else %}<img class="discover-cover" src="{{ url_for('static', filename='cover-placeholder.svg') }}" alt="Kapak görseli yok">{% endif %}
+      {% if book.free_read_available %}<span class="free-ribbon"><i class="bi bi-book-half"></i> Ücretsiz oku</span>{% endif %}
+    </div>
+    <div class="discover-card-content">
+      <div class="discover-card-topline"><span class="language-pill"><i class="bi bi-translate"></i> Türkçe</span>{% if book.average_rating %}<span class="catalog-rating"><i class="bi bi-star-fill"></i> {{ '%.1f'|format(book.average_rating) }}</span>{% endif %}</div>
+      <h3>{{ book.title }}</h3>
+      <p class="discover-author">{{ book.author or 'Yazar bilgisi katalogda belirtilmemiş' }}</p>
+      {% if book.recommendation_reason %}<p class="recommendation-reason"><i class="bi bi-magic"></i> {{ book.recommendation_reason }}</p>{% endif %}
+      <div class="discover-facts">
+        {% if book.first_publish_year %}<span><i class="bi bi-calendar3"></i> {{ book.first_publish_year }}</span>{% endif %}
+        <span><i class="bi bi-layers"></i> {{ book.edition_count }} baskı kaydı</span>
+        <span><i class="bi bi-chat-heart"></i> {{ book.ratings_count }} okur puanı</span>
+      </div>
+      <div class="discover-links">
+        {% if book.free_read_url %}
+        <a class="btn btn-free-read" href="{{ book.free_read_url }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-book-half"></i> Yasal ücretsiz oku</a>
+        {% else %}
+        <span class="no-free-text"><i class="bi bi-shield-check"></i> Ücretsiz tam metin doğrulanmadı</span>
+        {% endif %}
+        <a class="catalog-link" href="{{ book.catalog_url }}" target="_blank" rel="noopener noreferrer">Katalog kaydı <i class="bi bi-box-arrow-up-right"></i></a>
+      </div>
+      <form class="discover-add-form" method="post" action="{{ url_for('create_book') }}">
+        <input type="hidden" name="title" value="{{ book.title }}">
+        <input type="hidden" name="author" value="{{ book.author }}">
+        <input type="hidden" name="publisher" value="">
+        <input type="hidden" name="isbn" value="{{ book.isbn }}">
+        <input type="hidden" name="publication_year" value="{{ book.first_publish_year or '' }}">
+        <input type="hidden" name="cover_url" value="{{ book.cover_url }}">
+        <input type="hidden" name="source_url" value="{{ book.catalog_url }}">
+        <input type="hidden" name="shelf" value="Okunacak">
+        {% if book.total_pages %}
+        <input type="hidden" name="total_pages" value="{{ book.total_pages }}">
+        <button class="btn btn-outline-primary btn-sm w-100" type="submit"><i class="bi bi-bookmark-plus"></i> Okunacaklarıma ekle</button>
+        {% else %}
+        <label class="visually-hidden" for="pages-{{ loop.index }}">Toplam sayfa sayısı</label>
+        <div class="input-group input-group-sm"><input class="form-control" id="pages-{{ loop.index }}" name="total_pages" type="number" min="1" placeholder="Sayfa sayısı" required><button class="btn btn-outline-primary" type="submit"><i class="bi bi-bookmark-plus"></i> Rafa ekle</button></div>
+        {% endif %}
+      </form>
+    </div>
+  </article>
+{% endfor %}
+</div>
+{% elif unavailable %}
+<div class="discover-empty"><span><i class="bi bi-cloud-slash"></i></span><h2>Kataloğa şu an ulaşılamıyor</h2><p>Biraz sonra tekrar deneyebilir veya üstteki arama alanını kullanabilirsin.</p></div>
+{% elif query %}
+<div class="discover-empty"><span><i class="bi bi-search"></i></span><h2>Türkçe sonuç bulamadık</h2><p>Başka bir kitap adı, yazar veya konu deneyebilirsin.</p></div>
+{% elif not has_reading_history %}
+<div class="discover-empty"><span><i class="bi bi-book"></i></span><h2>Öneri listen ilk kitaplarını bekliyor</h2><p>Okuduğun ya da okumakta olduğun kitapları ekleyince, aynı yazarlardan Türkçe eserler önereceğiz.</p><a class="btn btn-primary" href="{{ url_for('search') }}">İlk kitabını ekle</a></div>
+{% else %}
+<div class="discover-empty"><span><i class="bi bi-stars"></i></span><h2>Şu an sana göre eşleşme bulamadık</h2><p>Arama kutusuna bir yazar veya konu yazıp Türkçe katalogda gezinebilirsin.</p></div>
+{% endif %}
+{% endblock %}
